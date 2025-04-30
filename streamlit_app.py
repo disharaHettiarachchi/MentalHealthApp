@@ -1,19 +1,17 @@
 import streamlit as st
 import pandas as pd
 import pickle
-from xgboost import XGBClassifier
 
-# Load the trained XGBoost model
+# Load model and expected feature columns
 model = pickle.load(open('best_xgboost_model.pkl', 'rb'))
+expected_features = pickle.load(open('model_features.pkl', 'rb'))
 
-# App title
-st.title("Mental Health Predictor - Growing Stress")
-st.write("""
-This app predicts whether a person is experiencing **growing stress** based on behavioral and demographic inputs.
-""")
+# Title
+st.title("Mental Health Predictor – Growing Stress")
+st.write("This app predicts whether a person is experiencing **growing stress** based on behavior and background.")
 
-# Sidebar input form
-st.sidebar.header('Enter User Information')
+# Sidebar inputs
+st.sidebar.header('Enter your information')
 
 def user_input_features():
     Gender = st.sidebar.selectbox('Gender', ('Male', 'Female', 'Other'))
@@ -25,14 +23,14 @@ def user_input_features():
     Days_Indoors = st.sidebar.selectbox('Days Indoors', ('Less than 7 days', '1-14 days', '15-30 days', 'More than 30 days'))
     Changes_Habits = st.sidebar.selectbox('Changes in Habits', ('Yes', 'No', 'Maybe'))
     Mental_Health_History = st.sidebar.selectbox('Mental Health History', ('Yes', 'No', 'Maybe'))
-    Mood_Swings = st.sidebar.selectbox('Mood Swings Level', ('Low', 'Medium', 'High'))  # Now input
+    Mood_Swings = st.sidebar.selectbox('Mood Swings Level', ('Low', 'Medium', 'High'))
     Coping_Struggles = st.sidebar.selectbox('Coping Struggles', ('Yes', 'No'))
     Work_Interest = st.sidebar.selectbox('Decrease in Work Interest', ('Yes', 'No'))
     Social_Weakness = st.sidebar.selectbox('Social Weakness', ('Yes', 'No'))
     mental_health_interview = st.sidebar.selectbox('Willing for Interview', ('Yes', 'No', 'Maybe'))
     care_options = st.sidebar.selectbox('Access to Care Options', ('Yes', 'No', 'Not Sure'))
 
-    # Manual encoding of categorical variables based on training-time encoding
+    # Manual one-hot encoding
     data = {
         'Gender_Female': 1 if Gender == 'Female' else 0,
         'Gender_Other': 1 if Gender == 'Other' else 0,
@@ -61,20 +59,29 @@ def user_input_features():
         'care_options_No': 1 if care_options == 'No' else 0,
         'care_options_Not sure': 1 if care_options == 'Not Sure' else 0
     }
+
     return pd.DataFrame(data, index=[0])
 
 input_df = user_input_features()
 
-# Display user input
-st.subheader('Entered Information')
+# Align input with expected model features
+input_df = input_df.reindex(columns=expected_features, fill_value=0)
+
+# Show user inputs
+st.subheader("Your Input:")
 st.write(input_df)
 
 # Make prediction
 prediction = model.predict(input_df)
 
-# Prediction label mapping
-prediction_label = {0: 'No Stress Growth', 1: 'Maybe Stress Growing', 2: 'Yes Stress Growing'}
+# Map output class to label
+prediction_label = {
+    0: 'No Stress Growth',
+    1: 'Maybe Stress Growing',
+    2: 'Yes Stress Growing'
+}
 
-# Output
-st.subheader('Prediction')
-st.markdown(f"### 🧠 **Prediction: {prediction_label[prediction[0]]}**")
+# Display result
+st.subheader("Prediction Result")
+st.markdown(f"### 🧠 **{prediction_label[prediction[0]]}**")
+
